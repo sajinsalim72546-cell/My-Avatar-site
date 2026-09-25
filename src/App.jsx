@@ -18,8 +18,8 @@ import {
 } from 'lucide-react';
 
 const BG_HEX = '#e51b01'; // Exact background detected from video
-const TOTAL_FRAMES = 64;
-const LERP_FACTOR = 0.26; // Ultra-fast response factor (~35ms tracking)
+const TOTAL_FRAMES = 120; // High-density 120-frame continuous head rotation (3° per frame)
+const LERP_FACTOR = 0.16; // Silky fluid momentum without lag
 
 // Shortest-path circular angular lerp
 function lerpAngle(current, target, factor) {
@@ -156,11 +156,21 @@ export default function App() {
       const dy = mousePosRef.current.y - faceY;
       const dist = Math.hypot(dx, dy);
 
-      // Deadzone threshold (~12% of screen dimension)
+      // Deadzone with hysteresis to eliminate border jitter
       const minDimension = Math.min(canvasW, canvasH);
-      const deadzoneRadius = minDimension * 0.12;
-      const isDeadzone = dist <= deadzoneRadius;
-      inDeadzoneRef.current = isDeadzone;
+      const innerDeadzone = minDimension * 0.08;
+      const outerDeadzone = minDimension * 0.14;
+
+      if (inDeadzoneRef.current) {
+        if (dist > outerDeadzone) {
+          inDeadzoneRef.current = false;
+        }
+      } else {
+        if (dist < innerDeadzone) {
+          inDeadzoneRef.current = true;
+        }
+      }
+      const isDeadzone = inDeadzoneRef.current;
 
       // Calculate target angle in radians [-PI, PI]
       const targetAngle = Math.atan2(dy, dx);
@@ -243,7 +253,7 @@ export default function App() {
         <div className="loader-progress-track">
           <div className="loader-progress-bar" style={{ width: `${loadedPercent}%` }} />
         </div>
-        <div className="loader-percent">CALIBRATING 60FPS HEAD POSE TRAJECTORY • {loadedPercent}%</div>
+        <div className="loader-percent">CALIBRATING 120-FRAME HEAD POSE TRAJECTORY • {loadedPercent}%</div>
       </div>
 
       {/* 2. Fullscreen Canvas */}
